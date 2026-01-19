@@ -11,6 +11,10 @@
 
   <body>
     <h1>DES Y3 Multi-Resolution Mass Map</h1>
+    <label for="patch-selector" style="display:block; margin: 8px 0;">
+      Patch:
+      <select id="patch-selector"></select>
+    </label>
     <div id="aladin-lite-div"></div>
 
       <script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js"></script>
@@ -44,17 +48,9 @@
 
         console.log("Loaded patches:", patches.length);
 
-        // ---- UI: dropdown selector ----
-        const selector = document.createElement("select");
-        selector.id = "patch-selector";
-        selector.style.position = "absolute";
-        selector.style.top = "10px";
-        selector.style.left = "10px";
-        selector.style.zIndex = "9999";
-        selector.style.padding = "6px";
-        selector.style.fontSize = "14px";
+        const selector = document.getElementById("patch-selector");
 
-        // Add options
+        // Populate dropdown
         patches.forEach((p, idx) => {
           const opt = document.createElement("option");
           opt.value = String(idx);
@@ -62,26 +58,12 @@
           selector.appendChild(opt);
         });
 
-        // Add selector to page (overlay on top of viewer)
-        document.body.appendChild(selector);
-
-        // ---- Single-layer management ----
-        let currentLayerId = null;
-
+        // Make sure we can see what’s happening
         function showPatchByIndex(idx) {
           const p = patches[idx];
+          console.log("Showing patch:", idx, p.name, p.url);
 
-          // Remove previous overlay layer (if any)
-          if (currentLayerId !== null) {
-            try {
-              aladin.removeLayer(currentLayerId);
-            } catch (e) {
-              // Some builds don’t throw, but just in case
-              console.warn("Could not remove previous layer:", e);
-            }
-          }
-
-          // Create new overlay image
+          // Replace the same overlay slot every time
           const img = A.image(p.url, {
             name: p.name,
             imgFormat: p.imgFormat || "png",
@@ -89,34 +71,29 @@
             opacity: 0.9
           });
 
-          // Add it as a NEW overlay layer and keep its id
-          // NOTE: addOverlayImageLayer returns a layer in many builds, but not all.
-          // We'll set an explicit id ourselves as fallback.
-          const layerId = "active_patch";
-          currentLayerId = layerId;
+          // This REPLACES the previous overlay with the same id ("active_patch")
+          aladin.setOverlayImageLayer(img, "active_patch");
 
-          // If your Aladin build supports "setOverlayImageLayer", this will set/replace a named layer slot:
-          aladin.setOverlayImageLayer(img, layerId);
-
-          // Move camera so you actually see it
+          // Always jump to the patch center so you definitely see a change
           aladin.gotoRaDec(p.wcs.CRVAL1, p.wcs.CRVAL2);
 
-          // Optional: set FoV to roughly patch size (deg).
-          // Your patch spans (ra_max-ra_min) or (dec_max-dec_min).
+          // Set a reasonable FoV (don’t overdo it)
           if (p.radec_bounds && p.radec_bounds.length === 4) {
             const raSpan = Math.abs(p.radec_bounds[1] - p.radec_bounds[0]);
             const decSpan = Math.abs(p.radec_bounds[3] - p.radec_bounds[2]);
             const span = Math.max(raSpan, decSpan);
-            if (isFinite(span) && span > 0) aladin.setFoV(span * 3); // tweak factor as you like
+            if (isFinite(span) && span > 0) aladin.setFoV(span * 1.5);
           }
         }
 
-        // Hook up dropdown changes
+        // Hook up the dropdown
         selector.addEventListener("change", (e) => {
-          showPatchByIndex(parseInt(e.target.value, 10));
+          const idx = parseInt(e.target.value, 10);
+          showPatchByIndex(idx);
         });
 
-        // Show first patch initially
+        // Show patch 0 initially
+        selector.value = "0";
         showPatchByIndex(0);
       });
     </script>
