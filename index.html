@@ -44,6 +44,21 @@
 
         console.log("Loaded patches:", patches.length);
 
+        if (patches.length > 0) {
+          console.log("First patch:", patches[0].name, patches[0].url, patches[0].wcs);
+        }
+        if (patches.length > 1) {
+          console.log("Second patch:", patches[1].name, patches[1].url, patches[1].wcs);
+        }
+
+        // Check how many unique URLs you have (should be ~#patches)
+        const uniqueUrls = new Set(patches.map(p => p.url));
+        console.log("Unique patch URLs:", uniqueUrls.size);
+
+        // Check how many unique centers you have (CRVAL1/CRVAL2 should vary)
+        const uniqueCenters = new Set(patches.map(p => `${p.wcs.CRVAL1.toFixed(6)},${p.wcs.CRVAL2.toFixed(6)}`));
+        console.log("Unique patch centers:", uniqueCenters.size);
+
         // Make patches semi-transparent so overlaps are obvious
         const PATCH_OPACITY = 0.45;
 
