@@ -44,36 +44,28 @@
 
         console.log("Loaded patches:", patches.length);
 
-        if (patches.length > 0) {
-          console.log("First patch:", patches[0].name, patches[0].url, patches[0].wcs);
-        }
-        if (patches.length > 1) {
-          console.log("Second patch:", patches[1].name, patches[1].url, patches[1].wcs);
-        }
-
-        // Check how many unique URLs you have (should be ~#patches)
-        const uniqueUrls = new Set(patches.map(p => p.url));
-        console.log("Unique patch URLs:", uniqueUrls.size);
-
-        // Check how many unique centers you have (CRVAL1/CRVAL2 should vary)
-        const uniqueCenters = new Set(patches.map(p => `${p.wcs.CRVAL1.toFixed(6)},${p.wcs.CRVAL2.toFixed(6)}`));
-        console.log("Unique patch centers:", uniqueCenters.size);
+        console.log("Loaded patches:", patches.length);
+        console.log("Unique URLs:", new Set(patches.map(p => p.url)).size);
+        console.log("Unique centers:", new Set(patches.map(p => `${p.wcs.CRVAL1.toFixed(6)},${p.wcs.CRVAL2.toFixed(6)}`)).size);
 
         // Make patches semi-transparent so overlaps are obvious
         const PATCH_OPACITY = 0.45;
 
-        // Add EVERY patch as its own overlay layer, with a unique layer id
         patches.forEach((p, idx) => {
+          const layerId = `patch_${idx}`; // must be unique
+
           const img = A.image(p.url, {
-            name: p.name,                 // shows in UI
+            name: p.name,
             imgFormat: p.imgFormat || "png",
             wcs: p.wcs,
             opacity: PATCH_OPACITY
           });
 
-          // IMPORTANT: give each overlay a unique id in Aladin's overlay list
-          aladin.addOverlayImageLayer(img, `patch_${idx}`);
+          // IMPORTANT: unique id so it doesn't overwrite previous overlays
+          aladin.setOverlayImageLayer(img, layerId);
         });
+
+        aladin.setFoV(180);
       });
     </script>
   </body>
