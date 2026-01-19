@@ -13,9 +13,11 @@
     <h1>DES Y3 Multi-Resolution Mass Map</h1>
     <div id="aladin-lite-div"></div>
 
-    <script>
-      A.init.then(async () => {
-        const myHiPS = "https://kylemiller1.github.io/Mass-Maps/Wiener4_hips_masked/";
+      <script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js"></script>
+
+      <script>
+        A.init.then(async () => {
+          const myHiPS = "https://Intro-to-AI-Penn.github.io/mass_maps/hips/";
 
         const aladin = A.aladin("#aladin-lite-div", {
           survey: "P/2MASS/color",
