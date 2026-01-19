@@ -39,29 +39,26 @@
 
         // Load your generated catalog (relative file in this repo)
         const resp = await fetch("patches_tom4.json");
+        if (!resp.ok) throw new Error("Could not load patches_tom4.json: " + resp.status);
         const patches = await resp.json();
 
-        // Add each patch as an overlay
-        patches.forEach((p) => {
-          aladin.setOverlayImageLayer(
-            A.image(p.url, {
-              name: p.name,
-              imgFormat: p.imgFormat || "png",
-              wcs: p.wcs,
-              opacity: 0.95
-            })
-          );
-        });
+        console.log("Loaded patches:", patches.length);
 
-        // Optional: zoom to the first patch once it loads
-        // (Only do this if your JSON is non-empty)
-        if (patches.length > 0) {
-          const first = patches[0];
-          // Use the WCS center as a reasonable "go to"
-          const ra = first.wcs.CRVAL1;
-          const dec = first.wcs.CRVAL2;
-          aladin.gotoRaDec(ra, dec);
-        }
+        // Make patches semi-transparent so overlaps are obvious
+        const PATCH_OPACITY = 0.45;
+
+        // Add EVERY patch as its own overlay layer, with a unique layer id
+        patches.forEach((p, idx) => {
+          const img = A.image(p.url, {
+            name: p.name,                 // shows in UI
+            imgFormat: p.imgFormat || "png",
+            wcs: p.wcs,
+            opacity: PATCH_OPACITY
+          });
+
+          // IMPORTANT: give each overlay a unique id in Aladin's overlay list
+          aladin.addOverlayImageLayer(img, `patch_${idx}`);
+        });
       });
     </script>
   </body>
