@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>DES Y3 Multi-Resolution Mass Map</title>
+    <script defer src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js"></script>
+    <style>
+      #aladin-lite-div { width: 700px; height: 400px; }
+    </style>
+  </head>
+
+  <body>
+    <h1>DES Y3 Multi-Resolution Mass Map</h1>
+    <div id="aladin-lite-div"></div>
+
+    <script>
+      A.init.then(async () => {
+        const myHiPS = "https://kylemiller1.github.io/Mass-Maps/Wiener4_hips_masked/";
+
+        const aladin = A.aladin("#aladin-lite-div", {
+          survey: "P/2MASS/color",
+          name: "DES Wiener Tomographic Bin 4 Mass Map",
+          target: "13h00m00s -55d00m00s",
+          fov: 40,
+          showReticle: true,
+          showGotoControl: true,
+          showLayersControl: true,
+          showZoomControl: true,
+          showFullscreenControl: true,
+          opacity: 0.98
+        });
+
+        aladin.setProjection("MOL");
+
+        // HiPS overlay layer
+        aladin.setOverlayImageLayer(aladin.newImageSurvey(myHiPS, { opacity: 0.99 }), "wiener4");
+
+        // Load your generated catalog (relative file in this repo)
+        const resp = await fetch("patches_tom4.json");
+        const patches = await resp.json();
+
+        // Add each patch as an overlay
+        patches.forEach((p) => {
+          aladin.setOverlayImageLayer(
+            A.image(p.url, {
+              name: p.name,
+              imgFormat: p.imgFormat || "png",
+              wcs: p.wcs,
+              opacity: 0.95
+            })
+          );
+        });
+
+        // Optional: zoom to the first patch once it loads
+        // (Only do this if your JSON is non-empty)
+        if (patches.length > 0) {
+          const first = patches[0];
+          // Use the WCS center as a reasonable "go to"
+          const ra = first.wcs.CRVAL1;
+          const dec = first.wcs.CRVAL2;
+          aladin.gotoRaDec(ra, dec);
+        }
+      });
+    </script>
+  </body>
+</html>
