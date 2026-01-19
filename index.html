@@ -37,35 +37,87 @@
         // HiPS overlay layer
         aladin.setOverlayImageLayer(aladin.newImageSurvey(myHiPS, { opacity: 0.99 }), "wiener4");
 
-        // Load your generated catalog (relative file in this repo)
+        // Load catalog once
         const resp = await fetch("patches_tom4.json");
         if (!resp.ok) throw new Error("Could not load patches_tom4.json: " + resp.status);
         const patches = await resp.json();
 
         console.log("Loaded patches:", patches.length);
 
-        console.log("Loaded patches:", patches.length);
-        console.log("Unique URLs:", new Set(patches.map(p => p.url)).size);
-        console.log("Unique centers:", new Set(patches.map(p => `${p.wcs.CRVAL1.toFixed(6)},${p.wcs.CRVAL2.toFixed(6)}`)).size);
+        // ---- UI: dropdown selector ----
+        const selector = document.createElement("select");
+        selector.id = "patch-selector";
+        selector.style.position = "absolute";
+        selector.style.top = "10px";
+        selector.style.left = "10px";
+        selector.style.zIndex = "9999";
+        selector.style.padding = "6px";
+        selector.style.fontSize = "14px";
 
-        // Make patches semi-transparent so overlaps are obvious
-        const PATCH_OPACITY = 0.45;
-
+        // Add options
         patches.forEach((p, idx) => {
-          const layerId = `patch_${idx}`; // must be unique
+          const opt = document.createElement("option");
+          opt.value = String(idx);
+          opt.textContent = p.name;
+          selector.appendChild(opt);
+        });
 
+        // Add selector to page (overlay on top of viewer)
+        document.body.appendChild(selector);
+
+        // ---- Single-layer management ----
+        let currentLayerId = null;
+
+        function showPatchByIndex(idx) {
+          const p = patches[idx];
+
+          // Remove previous overlay layer (if any)
+          if (currentLayerId !== null) {
+            try {
+              aladin.removeLayer(currentLayerId);
+            } catch (e) {
+              // Some builds don’t throw, but just in case
+              console.warn("Could not remove previous layer:", e);
+            }
+          }
+
+          // Create new overlay image
           const img = A.image(p.url, {
             name: p.name,
             imgFormat: p.imgFormat || "png",
             wcs: p.wcs,
-            opacity: PATCH_OPACITY
+            opacity: 0.9
           });
 
-          // IMPORTANT: unique id so it doesn't overwrite previous overlays
+          // Add it as a NEW overlay layer and keep its id
+          // NOTE: addOverlayImageLayer returns a layer in many builds, but not all.
+          // We'll set an explicit id ourselves as fallback.
+          const layerId = "active_patch";
+          currentLayerId = layerId;
+
+          // If your Aladin build supports "setOverlayImageLayer", this will set/replace a named layer slot:
           aladin.setOverlayImageLayer(img, layerId);
+
+          // Move camera so you actually see it
+          aladin.gotoRaDec(p.wcs.CRVAL1, p.wcs.CRVAL2);
+
+          // Optional: set FoV to roughly patch size (deg).
+          // Your patch spans (ra_max-ra_min) or (dec_max-dec_min).
+          if (p.radec_bounds && p.radec_bounds.length === 4) {
+            const raSpan = Math.abs(p.radec_bounds[1] - p.radec_bounds[0]);
+            const decSpan = Math.abs(p.radec_bounds[3] - p.radec_bounds[2]);
+            const span = Math.max(raSpan, decSpan);
+            if (isFinite(span) && span > 0) aladin.setFoV(span * 3); // tweak factor as you like
+          }
+        }
+
+        // Hook up dropdown changes
+        selector.addEventListener("change", (e) => {
+          showPatchByIndex(parseInt(e.target.value, 10));
         });
 
-        aladin.setFoV(180);
+        // Show first patch initially
+        showPatchByIndex(0);
       });
     </script>
   </body>
